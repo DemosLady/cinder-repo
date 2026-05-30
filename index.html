@@ -1,0 +1,581 @@
+<svg style="display:none"></svg>
+<!-- Cinder — a secret that turns to ash -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Cinder — Send a secret that self-destructs</title>
+<meta name="description" content="Share a password or sensitive note as one link that self-destructs after it's read. Encrypted in your browser — zero-knowledge, no sign-up. You'll know the moment it's opened.">
+<meta name="keywords" content="self destructing message, send a secret link, one time password share, burn after reading, encrypted note, share password securely, disappearing message">
+<meta name="author" content="demosaii">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#ff6a2b">
+<link rel="canonical" href="https://cinder.app/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='86'>🔥</text></svg>">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Cinder">
+<meta property="og:title" content="Cinder — Send a secret that self-destructs">
+<meta property="og:description" content="One link, encrypted in your browser, gone the moment it's read. No sign-up.">
+<meta property="og:url" content="https://cinder.app/">
+<meta property="og:image" content="https://cinder.app/og.png">
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Cinder — Send a secret that self-destructs">
+<meta name="twitter:description" content="One link, encrypted in your browser, gone the moment it's read. No sign-up.">
+<meta name="twitter:image" content="https://cinder.app/og.png">
+
+<!-- Google Search Console — paste this site's verification token when ready -->
+<!-- <meta name="google-site-verification" content="REPLACE_WITH_CINDER_TOKEN"> -->
+
+<!-- Google Analytics 4 — replace G-Z5RGZRN1YF with this site's Measurement ID -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-Z5RGZRN1YF"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  // page_location is sanitised so the decryption key in the URL #fragment is NEVER sent to Google
+  gtag('config', 'G-Z5RGZRN1YF', { page_location: location.origin + location.pathname });
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+  :root{
+    --bg:#09080a;
+    --panel:#161219;
+    --panel-2:#120e14;
+    --line:#2b2430;
+    --line-hi:#3a3140;
+    --ink:#f0e9e0;
+    --ink-dim:#9a8f86;
+    --ink-faint:#665d56;
+    --ember:#ff6a2b;
+    --ember-2:#ffc15e;
+    --ember-deep:#e0431a;
+    --wax:#b5302b;
+    --good:#86e0a4;
+    --bad:#ff6066;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+    --serif:'Instrument Serif',Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--mono);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+    position:relative;overflow-x:hidden;
+  }
+  /* breathing ember glow from below + vignette */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:
+      radial-gradient(120% 70% at 50% 118%, rgba(255,106,43,.22), rgba(255,106,43,.05) 38%, transparent 60%),
+      radial-gradient(90% 60% at 50% 130%, rgba(255,193,94,.14), transparent 55%),
+      radial-gradient(140% 120% at 50% -20%, rgba(80,40,90,.10), transparent 60%);
+    animation:breathe 7s ease-in-out infinite;
+  }
+  @keyframes breathe{0%,100%{opacity:.78;transform:translateY(0)}50%{opacity:1;transform:translateY(-1.2%)}}
+  /* grain + faint scanline */
+  body::after{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:60;opacity:.045;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  /* drifting embers layer */
+  #embers{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden}
+  .spark{position:absolute;bottom:-12px;width:3px;height:3px;border-radius:50%;
+    background:var(--ember-2);box-shadow:0 0 8px 1px rgba(255,140,60,.9);opacity:0;
+    animation:rise linear infinite;}
+  @keyframes rise{
+    0%{opacity:0;transform:translateY(0) translateX(0) scale(.6)}
+    12%{opacity:.9}
+    100%{opacity:0;transform:translateY(-105vh) translateX(var(--drift)) scale(1.1)}
+  }
+
+  .wrap{max-width:680px;margin:0 auto;padding:54px 22px 70px;position:relative;z-index:2}
+
+  /* ---------- header ---------- */
+  header{display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:30px}
+  .seal{width:78px;height:78px;margin-bottom:18px;filter:drop-shadow(0 6px 16px rgba(181,48,43,.5));animation:wobble 6s ease-in-out infinite,dropin .9s cubic-bezier(.2,.8,.2,1) both}
+  @keyframes wobble{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(3deg)}}
+  @keyframes dropin{0%{opacity:0;transform:translateY(-22px) rotate(-14deg) scale(.7)}100%{opacity:1}}
+  .mark{
+    font-family:var(--serif);font-size:74px;line-height:.82;letter-spacing:.5px;
+    background:linear-gradient(176deg,#fff 0%, #d9cabb 42%, var(--ember-2) 92%, var(--ember) 120%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 0 38px rgba(255,120,50,.25);
+    animation:flicker 5.5s ease-in-out infinite, fadeUp .8s ease both;
+  }
+  .mark i{font-style:italic;color:var(--ember);-webkit-text-fill-color:var(--ember)}
+  @keyframes flicker{0%,100%{filter:brightness(1)}48%{filter:brightness(1.06)}50%{filter:brightness(.93)}52%{filter:brightness(1.05)}}
+  .tag{color:var(--ember-2);font-size:11px;letter-spacing:4px;text-transform:uppercase;margin-top:14px;opacity:.85;animation:fadeUp .8s .1s both}
+  .sub{color:var(--ink-dim);font-size:12.5px;margin-top:16px;max-width:430px;line-height:1.8;animation:fadeUp .8s .2s both}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
+  /* divider */
+  .rule{display:flex;align-items:center;justify-content:center;gap:14px;margin:26px auto 22px;max-width:340px;animation:fadeUp .8s .25s both}
+  .rule::before,.rule::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,transparent,var(--line-hi))}
+  .rule::after{background:linear-gradient(270deg,transparent,var(--line-hi))}
+  .rule b{width:6px;height:6px;transform:rotate(45deg);background:var(--ember);box-shadow:0 0 10px var(--ember)}
+
+  /* ---------- tabs ---------- */
+  .tabs{display:flex;gap:5px;background:linear-gradient(180deg,#1c1722,#15101a);border:1px solid var(--line);border-radius:15px;padding:6px;margin:0 auto 24px;width:max-content;box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 10px 30px -16px #000;animation:fadeUp .8s .3s both}
+  .tab{border:0;background:transparent;color:var(--ink-dim);font-family:var(--mono);font-size:12px;letter-spacing:.5px;padding:11px 20px;border-radius:10px;cursor:pointer;transition:.2s;position:relative}
+  .tab.on{color:var(--ink);background:linear-gradient(180deg,#2e2430,#241a26);box-shadow:0 0 0 1px var(--line-hi),0 0 22px -6px rgba(255,106,43,.5),inset 0 1px 0 rgba(255,255,255,.06)}
+  .tab.on::after{content:"";position:absolute;left:18%;right:18%;bottom:3px;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,var(--ember),transparent)}
+  .tab:hover:not(.on){color:var(--ink)}
+
+  /* ---------- cards ---------- */
+  .card{
+    position:relative;
+    background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    border:1px solid var(--line);border-radius:20px;padding:28px 26px;
+    box-shadow:0 30px 70px -34px #000, inset 0 1px 0 rgba(255,255,255,.045);
+    animation:fadeUp .7s .35s both;
+  }
+  .card::before{content:"";position:absolute;left:22px;right:22px;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,140,70,.55),transparent)}
+  label{display:block;font-size:10.5px;letter-spacing:2px;text-transform:uppercase;color:var(--ink-dim);margin:0 0 10px}
+  textarea,input[type=text],input[type=password],input[type=number]{
+    width:100%;background:#0c0a0e;border:1px solid var(--line);border-radius:12px;
+    color:var(--ink);font-family:var(--mono);font-size:14px;padding:14px 15px;resize:vertical;
+    transition:.2s;outline:none;box-shadow:inset 0 2px 8px rgba(0,0,0,.4);
+  }
+  textarea{min-height:130px;line-height:1.7}
+  textarea::placeholder,input::placeholder{color:#5a524b}
+  textarea:focus,input:focus{border-color:var(--ember);box-shadow:inset 0 2px 8px rgba(0,0,0,.4),0 0 0 3px rgba(255,106,43,.16),0 0 24px -6px rgba(255,106,43,.5)}
+
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:20px}
+  .opt{background:#0c0a0e;border:1px solid var(--line);border-radius:13px;padding:14px 15px;box-shadow:inset 0 2px 8px rgba(0,0,0,.35)}
+  .opt .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .opt small{display:block;color:var(--ink-faint);font-size:10px;margin-top:7px;line-height:1.55}
+  select{background:#161018;border:1px solid var(--line-hi);color:var(--ember-2);font-family:var(--mono);font-size:12px;border-radius:9px;padding:8px 9px;outline:none;cursor:pointer}
+
+  .btn{
+    position:relative;overflow:hidden;width:100%;margin-top:22px;border:0;cursor:pointer;border-radius:13px;padding:16px;
+    font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;
+    color:#220f04;background:linear-gradient(180deg,var(--ember-2),var(--ember) 55%,var(--ember-deep));
+    box-shadow:0 16px 34px -12px rgba(255,106,43,.6),inset 0 1px 0 rgba(255,255,255,.5),inset 0 -2px 6px rgba(120,30,0,.4);
+    transition:.18s;
+  }
+  .btn::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-18deg);transition:.5s}
+  .btn:hover{transform:translateY(-2px);filter:brightness(1.07)}
+  .btn:hover::after{left:120%}
+  .btn:active{transform:translateY(0)}
+  .btn.ghost{background:linear-gradient(180deg,#241c28,#1b1420);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line-hi),inset 0 1px 0 rgba(255,255,255,.05)}
+  .btn.ghost::after{display:none}
+  .btn.danger{background:linear-gradient(180deg,#ff8079,#d6362f);color:#fff}
+
+  .hint{font-size:11px;color:var(--ink-faint);margin-top:15px;line-height:1.8;text-align:center}
+  .hint b{color:var(--ember-2)}
+
+  .token{background:#0c0a0e;border:1px dashed var(--ember);border-radius:12px;padding:15px;font-size:12.5px;word-break:break-all;color:var(--ember-2);line-height:1.7;margin-top:6px;box-shadow:inset 0 0 22px -8px rgba(255,106,43,.4)}
+  .cap{display:flex;justify-content:space-between;align-items:baseline;margin-top:24px}
+  .cap h3{font-family:var(--serif);font-size:25px;font-weight:400;margin:0;color:var(--ink)}
+  .cap span{font-size:10px;color:var(--ink-faint);letter-spacing:2px}
+  .copyrow{display:flex;gap:10px;margin-top:13px}
+  .copyrow .btn{margin-top:0}
+  .share{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:13px}
+  .share .btn{margin-top:0;display:flex;align-items:center;justify-content:center;gap:7px;text-decoration:none;font-size:12px;padding:14px}
+  .share .wa{background:linear-gradient(180deg,#46d784,#1faa59);color:#06210f;box-shadow:0 12px 26px -12px rgba(37,211,102,.45),inset 0 1px 0 rgba(255,255,255,.4),inset 0 -2px 6px rgba(0,60,20,.3)}
+  .share .wa::after{display:none}
+  .previewlink{display:block;text-align:center;margin-top:16px;font-size:11px;color:var(--ink-faint);text-decoration:underline;text-underline-offset:3px;cursor:pointer;letter-spacing:.5px}
+  .previewlink:hover{color:var(--ember-2)}
+  .incoming{background:linear-gradient(180deg,rgba(255,106,43,.14),rgba(255,106,43,.04));border:1px solid rgba(255,140,70,.4);border-radius:13px;padding:16px;font-size:12.5px;line-height:1.75;color:var(--ember-2);margin-bottom:18px;text-align:center;box-shadow:inset 0 0 24px -10px rgba(255,106,43,.5)}
+  .incoming .em{font-size:26px;display:block;margin-bottom:8px}
+  .incoming b{color:#fff}
+  .warn{background:linear-gradient(180deg,rgba(255,96,102,.12),rgba(255,96,102,.04));border:1px solid rgba(255,96,102,.4);border-radius:13px;padding:14px 16px;font-size:12px;line-height:1.7;color:#ffb3b6;margin-bottom:18px}
+  .warn b{color:#fff}
+  .passbox{background:#0c0a0e;border:1px dashed var(--ember-2);border-radius:12px;padding:16px;text-align:center;font-size:19px;letter-spacing:1.5px;color:var(--ember-2);margin-top:6px;word-break:break-all;box-shadow:inset 0 0 22px -8px rgba(255,193,94,.5)}
+  .genlink{display:inline-block;margin-top:9px;font-size:11px;color:var(--ember-2);text-decoration:underline;text-underline-offset:3px;cursor:pointer;letter-spacing:.3px}
+  .genlink:hover{color:#fff}
+  #qr{display:flex;justify-content:center;margin:20px auto 6px;padding:14px;background:#fff;border-radius:14px;width:max-content;box-shadow:0 0 30px -8px rgba(255,140,60,.5)}
+  .receipt-code{font-size:14px;color:var(--ember-2);background:#0c0a0e;border:1px solid var(--line-hi);border-radius:10px;padding:12px;text-align:center;letter-spacing:3px;margin-top:6px;box-shadow:inset 0 0 18px -8px rgba(255,106,43,.5)}
+
+  .reveal{background:#0c0a0e;border:1px solid var(--line);border-radius:13px;padding:20px;margin-top:8px;font-size:15px;line-height:1.8;white-space:pre-wrap;word-break:break-word;position:relative;min-height:64px;box-shadow:inset 0 2px 10px rgba(0,0,0,.5)}
+  .reveal.burning{animation:char 2.4s ease forwards}
+  .reveal.burning::before{content:"";position:absolute;inset:0;border-radius:13px;pointer-events:none;background:linear-gradient(0deg,var(--ember-deep) 0%,var(--ember) 16%,var(--ember-2) 30%,transparent 52%);mix-blend-mode:screen;opacity:0;animation:flame 2.4s ease forwards}
+  @keyframes flame{0%{opacity:0;transform:translateY(20%) scaleY(.6)}25%{opacity:.95}60%{opacity:.7}100%{opacity:0;transform:translateY(-32%) scaleY(1.5)}}
+  @keyframes char{0%{filter:none}30%{filter:sepia(.6) brightness(1.12)}65%{filter:sepia(1) brightness(.5) blur(.5px);color:#4a444c}100%{filter:brightness(.16) blur(2px);color:#241f25;opacity:.22;transform:translateY(7px) scale(.982)}}
+
+  .badge{display:inline-flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.5px;color:var(--ink-dim);background:#0c0a0e;border:1px solid var(--line);border-radius:22px;padding:7px 14px}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--ember);box-shadow:0 0 10px var(--ember);animation:pulse 2s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+
+  .msg{margin-top:16px;font-size:12px;padding:12px 14px;border-radius:10px;line-height:1.6;display:none}
+  .msg.show{display:block}
+  .msg.err{background:rgba(255,96,102,.1);color:#ff9da1;border:1px solid rgba(255,96,102,.32)}
+  .msg.ok{background:rgba(134,224,164,.08);color:var(--good);border:1px solid rgba(134,224,164,.28)}
+
+  .pane{display:none}
+  .pane.on{display:block}
+  .pane.on .card{animation:fadeUp .45s ease both}
+
+  footer{text-align:center;margin-top:32px;color:var(--ink-faint);font-size:10px;letter-spacing:.5px;line-height:1.9}
+  footer b{color:var(--ink-dim)}
+  .why{margin-top:26px;border:1px solid var(--line);border-radius:16px;padding:20px 22px;background:linear-gradient(180deg,rgba(255,255,255,.02),transparent);position:relative}
+  .why::before{content:"";position:absolute;left:20px;right:20px;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,140,70,.4),transparent)}
+  .why h4{font-family:var(--serif);font-weight:400;font-size:20px;margin:0 0 12px;color:var(--ink)}
+  .why ul{margin:0;padding-left:18px;color:var(--ink-dim);font-size:11.5px;line-height:2}
+  .why ul b{color:var(--ember-2)}
+
+  @media(max-width:560px){.opts{grid-template-columns:1fr}.mark{font-size:58px}}
+</style>
+
+<div id="embers"></div>
+
+<div class="wrap">
+  <header>
+    <svg class="seal" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="wax" cx="40%" cy="35%" r="75%">
+          <stop offset="0%" stop-color="#e8584f"/><stop offset="55%" stop-color="#b5302b"/><stop offset="100%" stop-color="#7c1d1a"/>
+        </radialGradient>
+        <linearGradient id="fl" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0%" stop-color="#ffd27a"/><stop offset="100%" stop-color="#ff6a2b"/>
+        </linearGradient>
+      </defs>
+      <path d="M50 4c12 8 9 20 18 24 6 3 14 1 18 7 5 7-1 16 1 24 1 7 8 12 7 20-1 9-12 10-17 17-4 6-3 16-11 19-8 4-15-4-23-4s-15 8-23 4c-8-3-7-13-11-19-5-7-16-8-17-17-1-8 6-13 7-20 2-8-4-17 1-24 4-6 12-4 18-7 9-4 6-16 18-24z" fill="url(#wax)" stroke="#5e1411" stroke-width="1.5"/>
+      <circle cx="50" cy="52" r="28" fill="none" stroke="#7c1d1a" stroke-width="1.4" opacity=".7"/>
+      <path d="M50 36c5 6 2 11 6 16 2 3 6 4 6 9 0 7-6 11-12 11s-12-4-12-11c0-4 3-6 5-9 1-2 1-5 0-8 4 1 5 5 5 8 2-2 3-5 2-8-1-2-1-5-0-8z" fill="url(#fl)"/>
+    </svg>
+    <div class="mark">cin<i>der</i></div>
+    <div class="tag">burn after reading</div>
+    <div class="sub">Seal a secret, share one link. It's encrypted in your browser — the server only ever holds ash. Once it's read, it's gone, and you'll know exactly when.</div>
+    <div class="rule"><b></b></div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab on" data-pane="seal">Seal a secret</button>
+    <button class="tab" data-pane="open">Open a secret</button>
+    <button class="tab" data-pane="receipt">Check receipt</button>
+  </div>
+
+  <!-- ============ SEAL ============ -->
+  <section class="pane on" id="pane-seal">
+    <div class="card" id="seal-form">
+      <label>Your secret</label>
+      <textarea id="secret" placeholder="A password, a recovery code, a confession, the WiFi…"></textarea>
+      <div class="opts">
+        <div class="opt">
+          <div class="row"><label style="margin:0">Self-destruct</label>
+            <select id="views"><option value="1">After 1 read</option><option value="3">After 3 reads</option><option value="5">After 5 reads</option></select>
+          </div>
+          <small>The record is wiped the instant the last read happens.</small>
+        </div>
+        <div class="opt">
+          <div class="row"><label style="margin:0">Also expire</label>
+            <select id="ttl"><option value="0">Never (only on read)</option><option value="3600">In 1 hour</option><option value="86400">In 24 hours</option><option value="604800">In 7 days</option></select>
+          </div>
+          <small>Whichever comes first — read or clock — it turns to ash.</small>
+        </div>
+      </div>
+      <div style="margin-top:16px">
+        <label>Passphrase &nbsp;<span style="color:var(--ink-faint);text-transform:none;letter-spacing:0">— optional, but this is the real security</span></label>
+        <input type="text" id="pass" placeholder="Leave empty for a link-only secret">
+        <span class="genlink" id="genCode">✦ Generate an easy-to-dictate code</span>
+        <div class="hint" style="text-align:left;margin-top:8px">With a passphrase, the link alone can't open the secret — you send the passphrase by a <b>different channel</b>. Without one, anyone with the link can read it.</div>
+      </div>
+      <button class="btn" id="sealBtn">🔒 &nbsp;Seal it</button>
+      <div class="msg" id="seal-msg"></div>
+    </div>
+
+    <div class="card" id="seal-result" style="display:none;margin-top:16px">
+      <div class="warn" id="warn-2ch" style="display:none">⚠ <b>Two channels, never one.</b> The link below can't open the secret without the passphrase. Send them <b>separately</b> — e.g. link by email, passphrase by SMS or said out loud. Anyone who gets both in one place gets the secret.</div>
+      <div class="cap"><h3 id="linkHead">One link. One life.</h3><span>SHARE THIS</span></div>
+      <div class="token" id="link-out"></div>
+      <div class="share">
+        <button class="btn" id="copyLink">📋 Copy</button>
+        <a class="btn wa" id="waShare" target="_blank" rel="noopener">WhatsApp</a>
+        <a class="btn ghost" id="mailShare">✉ Email</a>
+        <button class="btn ghost" id="copyQR">▦ QR</button>
+      </div>
+      <div id="qr" style="display:none"></div>
+      <span class="previewlink" id="previewRecipient">▸ Preview the link as the recipient sees it</span>
+      <div id="passblock" style="display:none">
+        <div class="cap"><h3>② The passphrase</h3><span>SEND SEPARATELY</span></div>
+        <div class="passbox" id="pass-out"></div>
+        <div class="share">
+          <button class="btn ghost" id="copyPass">📋 Copy passphrase</button>
+          <a class="btn ghost" id="smsPass">💬 Send by SMS</a>
+        </div>
+        <div class="hint">Say it on a call, text it, or use a different app — just <b>not in the same message as the link.</b></div>
+      </div>
+      <div class="cap"><h3>Your receipt code</h3><span>KEEP THIS</span></div>
+      <div class="receipt-code" id="receipt-out"></div>
+      <div class="hint">Paste it into <b>Check receipt</b> later to see if &amp; when your secret was opened.</div>
+      <button class="btn ghost" id="sealAgain" style="margin-top:18px">Seal another</button>
+    </div>
+  </section>
+
+  <!-- ============ OPEN ============ -->
+  <section class="pane" id="pane-open">
+    <div class="card" id="open-form">
+      <div class="incoming" id="incoming" style="display:none"><span class="em">📨</span>You've received a secret. Press <b>Reveal &amp; burn</b> when you're ready — reading it destroys it for good. If it asks for a passphrase, that's the code the sender gave you separately.</div>
+      <div id="manualEntry">
+        <label>Paste the cinder link</label>
+        <input type="text" id="link-in" placeholder="cinder://… or the token you were sent">
+      </div>
+      <div id="passWrap" style="margin-top:14px;display:none">
+        <label>Passphrase required</label>
+        <input type="password" id="pass-in" placeholder="The passphrase the sender gave you">
+      </div>
+      <button class="btn" id="openBtn">Reveal &amp; burn</button>
+      <div class="hint">Reading this destroys it. Make sure you're ready to copy what's inside.</div>
+      <div class="msg" id="open-msg"></div>
+    </div>
+    <div class="card" id="open-result" style="display:none;margin-top:16px">
+      <div class="meta"><span class="badge"><span class="dot"></span><span id="open-status">live secret</span></span></div>
+      <div class="reveal" id="revealed"></div>
+      <div class="copyrow" id="revealActions" style="margin-top:14px"><button class="btn" id="copySecret">Copy secret</button></div>
+      <div class="msg ok" id="burned-note" style="margin-top:16px">🔥 This secret has turned to ash. The link is now dead — refreshing it shows nothing.</div>
+    </div>
+  </section>
+
+  <!-- ============ RECEIPT ============ -->
+  <section class="pane" id="pane-receipt">
+    <div class="card">
+      <label>Receipt code</label>
+      <input type="text" id="rc-in" placeholder="Your receipt code (saved when you sealed)">
+      <button class="btn ghost" id="rcBtn">Check status</button>
+      <div class="msg" id="rc-msg"></div>
+      <div id="rc-result" style="display:none;margin-top:18px">
+        <div class="meta"><span class="badge"><span class="dot" id="rc-dot"></span><span id="rc-state">—</span></span></div>
+        <div class="hint" id="rc-detail" style="text-align:left;margin-top:14px"></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="why">
+    <h4>What makes Cinder different</h4>
+    <ul>
+      <li><b>Zero-knowledge.</b> Encryption happens in your browser. Storage only ever holds ciphertext + the decryption key lives in the link itself, never on the server.</li>
+      <li><b>Read receipts.</b> You get a private code that tells you <em>if and when</em> your secret was opened — peace of mind no other tool gives you.</li>
+      <li><b>Flexible burn rules.</b> Destroy after N reads, after a timer, or both. Add a passphrase for a true second factor.</li>
+      <li><b>It actually burns.</b> A small, satisfying moment when the secret turns to ash.</li>
+    </ul>
+  </div>
+
+  <footer>
+    <b>Cinder</b> — prototype · the secret never leaves your device unencrypted<br>
+    In production each secret becomes a real link like <b>cinder.app/s/…</b>
+  </footer>
+</div>
+
+<script>
+/* ---------- drifting embers ---------- */
+(function(){
+  const layer=document.getElementById('embers');
+  const N=22;
+  for(let i=0;i<N;i++){
+    const s=document.createElement('span');s.className='spark';
+    const dur=6+Math.random()*9, delay=Math.random()*12, size=2+Math.random()*3;
+    s.style.left=(Math.random()*100)+'%';
+    s.style.width=s.style.height=size+'px';
+    s.style.setProperty('--drift',(Math.random()*60-30)+'px');
+    s.style.animationDuration=dur+'s';s.style.animationDelay=(-delay)+'s';
+    if(Math.random()>.6)s.style.background='var(--ember)';
+    layer.appendChild(s);
+  }
+})();
+function burnSparks(el){
+  const r=el.getBoundingClientRect();
+  for(let i=0;i<16;i++){
+    const s=document.createElement('span');s.className='spark';
+    s.style.position='fixed';s.style.bottom='auto';
+    s.style.left=(r.left+Math.random()*r.width)+'px';
+    s.style.top=(r.top+r.height*.6)+'px';
+    s.style.setProperty('--drift',(Math.random()*120-60)+'px');
+    s.style.animation='rise '+(1.4+Math.random()*1.2)+'s ease-out forwards';
+    document.body.appendChild(s);
+    setTimeout(()=>s.remove(),2800);
+  }
+}
+
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const enc=new TextEncoder(), dec=new TextDecoder();
+const b64u={
+  enc:buf=>btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''),
+  dec:str=>{str=str.replace(/-/g,'+').replace(/_/g,'/');while(str.length%4)str+='=';const bin=atob(str);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u;}
+};
+const rid=n=>{const u=crypto.getRandomValues(new Uint8Array(n||9));return b64u.enc(u).slice(0,12);};
+function show(el,type,text){el.className='msg show '+type;el.textContent=text;}
+function hide(el){el.className='msg';}
+
+/* storage adapter — uses Claude's window.storage if present, else localStorage */
+const hasWS=(typeof window!=='undefined')&&window.storage&&typeof window.storage.set==='function';
+const store={
+  async set(k,v){if(hasWS){try{return await window.storage.set(k,JSON.stringify(v),true);}catch(e){}}localStorage.setItem(k,JSON.stringify(v));},
+  async get(k){if(hasWS){try{const r=await window.storage.get(k,true);return r?JSON.parse(r.value):null;}catch(e){return null;}}const r=localStorage.getItem(k);return r?JSON.parse(r):null;},
+  async del(k){if(hasWS){try{await window.storage.delete(k,true);}catch(e){}return;}localStorage.removeItem(k);}
+};
+async function put(k,v){return store.set(k,v);}
+async function got(k){return store.get(k);}
+async function del(k){return store.del(k);}
+
+/* ---------- API layer (real backend, with local demo fallback) ---------- */
+let BACKEND=null;
+async function hasBackend(){if(BACKEND!==null)return BACKEND;try{const r=await fetch('/api/health',{cache:'no-store'});BACKEND=r.ok;}catch(e){BACKEND=false;}return BACKEND;}
+const api={
+  async seal(p){if(!(await hasBackend()))return demoSeal(p);const r=await fetch('/api/seal',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(p)});if(!r.ok)throw new Error('Server '+r.status);return r.json();},
+  async open(id){if(!(await hasBackend()))return demoOpen(id);const r=await fetch('/api/open',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id})});if(r.status===404||r.status===429)return{gone:true};if(r.status===410)return{expired:true};if(!r.ok)throw new Error('Server '+r.status);return r.json();},
+  async confirm(id){if(!(await hasBackend()))return demoConfirm(id);try{const r=await fetch('/api/confirm',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id})});return r.ok?r.json():{burned:true,remaining:0};}catch(e){return{burned:true,remaining:0};}},
+  async receipt(t){if(!(await hasBackend()))return demoReceipt(t);const r=await fetch('/api/receipt?token='+encodeURIComponent(t));if(r.status===404)return{notfound:true};if(!r.ok)throw new Error('Server '+r.status);return r.json();}
+};
+/* demo implementations mirror the server exactly, using local storage */
+async function demoSeal(p){const id=rid();const receiptToken='r'+rid()+rid();const rec=Object.assign({},p,{views:0,createdAt:Date.now(),expiresAt:p.ttl?Date.now()+p.ttl*1000:0,receiptToken});await put('s_'+id,rec);await put('r_'+receiptToken,{createdAt:rec.createdAt,opened:false,openCount:0,expiresAt:rec.expiresAt,maxViews:p.maxViews});return{id,receiptToken};}
+async function demoOpen(id){const rec=await got('s_'+id);if(!rec)return{gone:true};if(rec.expiresAt&&Date.now()>rec.expiresAt){await del('s_'+id);const rcp=await got('r_'+rec.receiptToken);if(rcp){rcp.expired=true;await put('r_'+rec.receiptToken,rcp);}return{expired:true};}
+  if(!rec.pass){rec.views++;const burned=rec.views>=rec.maxViews;const rcp=await got('r_'+rec.receiptToken);if(rcp){rcp.opened=true;rcp.openCount=rec.views;rcp.lastOpenedAt=Date.now();if(burned)rcp.burnedAt=Date.now();await put('r_'+rec.receiptToken,rcp);}if(burned)await del('s_'+id);else await put('s_'+id,rec);return{iv:rec.iv,ct:rec.ct,pass:false,remaining:Math.max(0,rec.maxViews-rec.views),burned};}
+  return{iv:rec.iv,ct:rec.ct,pass:true,salt:rec.salt,wIv:rec.wIv,wCt:rec.wCt};}
+async function demoConfirm(id){const rec=await got('s_'+id);if(!rec)return{burned:true,remaining:0};rec.views=(rec.views||0)+1;const burned=rec.views>=rec.maxViews;const rcp=await got('r_'+rec.receiptToken);if(rcp){rcp.opened=true;rcp.openCount=rec.views;rcp.lastOpenedAt=Date.now();if(burned)rcp.burnedAt=Date.now();await put('r_'+rec.receiptToken,rcp);}if(burned)await del('s_'+id);else await put('s_'+id,rec);return{burned,remaining:Math.max(0,rec.maxViews-rec.views)};}
+async function demoReceipt(t){const r=await got('r_'+t);return r||{notfound:true};}
+
+/* crypto */
+async function aesKeyFromRaw(raw){return crypto.subtle.importKey('raw',raw,{name:'AES-GCM'},false,['encrypt','decrypt']);}
+async function encryptWith(rawKey,text){const key=await aesKeyFromRaw(rawKey);const iv=crypto.getRandomValues(new Uint8Array(12));const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,enc.encode(text));return {iv:b64u.enc(iv),ct:b64u.enc(ct)};}
+async function decryptWith(rawKey,ivB64,ctB64){const key=await aesKeyFromRaw(rawKey);const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64u.dec(ivB64)},key,b64u.dec(ctB64));return dec.decode(pt);}
+async function deriveFromPass(pass,saltB64){const salt=b64u.dec(saltB64);const base=await crypto.subtle.importKey('raw',enc.encode(pass),{name:'PBKDF2'},false,['deriveBits']);const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt,iterations:150000,hash:'SHA-256'},base,256);return new Uint8Array(bits);}
+
+/* ---------- tabs ---------- */
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.pane').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on');$('#pane-'+t.dataset.pane).classList.add('on');
+  if(t.dataset.pane==='open'&&!parseToken(location.hash)){$('#manualEntry').style.display='block';$('#incoming').style.display='none';$('#open-form').style.display='block';$('#open-result').style.display='none';}
+});
+
+/* ---------- SEAL ---------- */
+$('#sealBtn').onclick=async()=>{
+  const txt=$('#secret').value.trim();const m=$('#seal-msg');
+  if(!txt){show(m,'err','Write a secret first.');return;}
+  hide(m);
+  const sb=$('#sealBtn');const sbT=sb.textContent;sb.disabled=true;sb.textContent='Sealing…';
+  const pass=$('#pass').value;const maxViews=parseInt($('#views').value);const ttl=parseInt($('#ttl').value);
+  const dataKey=crypto.getRandomValues(new Uint8Array(32));
+  try{
+    const {iv,ct}=await encryptWith(dataKey,txt);
+    const payload={iv,ct,maxViews,ttl,pass:!!pass};
+    if(pass){
+      const salt=crypto.getRandomValues(new Uint8Array(16));
+      const kp=await deriveFromPass(pass,b64u.enc(salt));
+      const wrap=await encryptWith(kp,b64u.enc(dataKey));
+      payload.salt=b64u.enc(salt);payload.wIv=wrap.iv;payload.wCt=wrap.ct;
+    }
+    const res=await api.seal(payload);
+    const id=res.id;
+    const hashTok = pass ? id : (id+'.'+b64u.enc(dataKey));
+    const shareUrl = location.href.split('#')[0] + '#' + hashTok;
+    const note = (pass
+      ? "🔒 I've sent you a secret on Cinder. It self-destructs after you read it. You'll also need a passphrase, which I'm sending separately:\n\n"
+      : "🔒 I've sent you a secret on Cinder. It self-destructs after you read it:\n\n") + shareUrl;
+    $('#link-out').textContent=shareUrl;$('#receipt-out').textContent=res.receiptToken;
+    $('#qr').innerHTML='';$('#qr').style.display='none';$('#qr').dataset.val=shareUrl;$('#qr').dataset.tok=hashTok;
+    $('#waShare').href='https://wa.me/?text='+encodeURIComponent(note);
+    $('#mailShare').href='mailto:?subject='+encodeURIComponent('A secret for you — it self-destructs')+'&body='+encodeURIComponent(note);
+    if(pass){
+      $('#warn-2ch').style.display='block';
+      $('#linkHead').textContent='① Send the link';
+      $('#passblock').style.display='block';
+      $('#pass-out').textContent=pass;
+      $('#smsPass').href='sms:?&body='+encodeURIComponent(pass);
+    }else{
+      $('#warn-2ch').style.display='none';
+      $('#linkHead').textContent='One link. One life.';
+      $('#passblock').style.display='none';
+    }
+    $('#seal-form').style.display='none';$('#seal-result').style.display='block';
+  }catch(e){show(m,'err','Could not seal: '+e.message);}
+  finally{sb.disabled=false;sb.textContent=sbT;}
+};
+$('#copyLink').onclick=()=>{navigator.clipboard.writeText($('#link-out').textContent);$('#copyLink').textContent='Copied ✓';setTimeout(()=>$('#copyLink').textContent='📋 Copy',1400);};
+$('#copyPass').onclick=()=>{navigator.clipboard.writeText($('#pass-out').textContent);$('#copyPass').textContent='Copied ✓';setTimeout(()=>$('#copyPass').textContent='📋 Copy passphrase',1400);};
+$('#genCode').onclick=()=>{$('#pass').value=genCode();$('#pass').focus();};
+$('#copyQR').onclick=()=>{const box=$('#qr');if(box.style.display==='none'){box.style.display='flex';box.innerHTML='';try{new QRCode(box,{text:box.dataset.val,width:170,height:170,colorDark:'#09080a',colorLight:'#ffffff'});}catch(e){box.textContent='QR unavailable';}$('#copyQR').textContent='Hide QR';}else{box.style.display='none';$('#copyQR').textContent='Show QR';}};
+$('#sealAgain').onclick=()=>{$('#secret').value='';$('#pass').value='';$('#seal-form').style.display='block';$('#seal-result').style.display='none';if(location.hash)history.replaceState(null,'',location.pathname+location.search);$('#manualEntry').style.display='block';$('#incoming').style.display='none';};
+
+/* ---------- OPEN ---------- */
+function parseToken(s){s=(s||'').trim();if(s.includes('#'))s=s.split('#').pop();return s.replace(/^cinder:\/\//,'').trim();}
+const WORDS=['river','mango','ember','tiger','cloud','amber','stone','maple','raven','lunar','frost','coral','spark','willow','onyx','comet','birch','vivid','jade','cobalt','sable','flint','meadow','quartz'];
+function genCode(){const w=()=>WORDS[Math.floor(Math.random()*WORDS.length)];let a=w(),b=w();while(b===a)b=w();return a+'-'+b+'-'+Math.floor(10+Math.random()*89);}
+$('#link-in').oninput=()=>{const v=parseToken($('#link-in').value);$('#passWrap').style.display=(v&&!v.includes('.'))?'block':'none';};
+$('#openBtn').onclick=async()=>{
+  const m=$('#open-msg');hide(m);
+  let raw=parseToken($('#link-in').value);
+  if(!raw){show(m,'err','Paste a cinder link.');return;}
+  const dot=raw.indexOf('.');
+  const id=dot>=0?raw.slice(0,dot):raw;
+  const keyPart=dot>=0?raw.slice(dot+1):'';
+  const ob=$('#openBtn');const obT=ob.textContent;ob.disabled=true;ob.textContent='Opening…';
+  try{
+    const res=await api.open(id);
+    if(res.gone){show(m,'err','This secret doesn\'t exist — it may have already burned, or never existed.');return;}
+    if(res.expired){show(m,'err','This secret expired and has turned to ash.');return;}
+    let dataKey;
+    if(res.pass){
+      const passv=$('#pass-in').value;
+      if(!passv){show(m,'err','This secret needs a passphrase.');return;}
+      try{const kp=await deriveFromPass(passv,res.salt);const dkB64=await decryptWith(kp,res.wIv,res.wCt);dataKey=b64u.dec(dkB64);}
+      catch(e){show(m,'err','Wrong passphrase — couldn\'t decrypt.');return;}
+    }else{
+      if(!keyPart){show(m,'err','This link is missing its key.');return;}
+      dataKey=b64u.dec(keyPart);
+    }
+    let plain;
+    try{plain=await decryptWith(dataKey,res.iv,res.ct);}catch(e){show(m,'err','Decryption failed. The link or passphrase is wrong.');return;}
+    let burns,remaining;
+    if(res.pass){const c=await api.confirm(id);burns=!!c.burned;remaining=c.remaining||0;}
+    else{burns=!!res.burned;remaining=res.remaining||0;}
+    $('#open-form').style.display='none';$('#open-result').style.display='block';
+    const rv=$('#revealed');rv.textContent=plain;rv.className='reveal';
+    $('#revealActions').style.display='flex';$('#burned-note').style.display='none';
+    $('#open-status').textContent=burns?'burning…':remaining+' read(s) left';
+    if(burns){setTimeout(()=>{rv.classList.add('burning');burnSparks(rv);setTimeout(()=>{$('#burned-note').style.display='block';$('#open-status').textContent='ash';},2400);},4000);}
+    if(location.hash)history.replaceState(null,'',location.pathname+location.search);
+  }catch(e){show(m,'err','Could not open: '+e.message);}
+  finally{ob.disabled=false;ob.textContent=obT;}
+};
+$('#copySecret').onclick=()=>{navigator.clipboard.writeText($('#revealed').textContent);$('#copySecret').textContent='Copied ✓';setTimeout(()=>$('#copySecret').textContent='Copy secret',1400);};
+
+/* ---------- RECEIPT ---------- */
+$('#rcBtn').onclick=async()=>{
+  const m=$('#rc-msg');hide(m);
+  const token=$('#rc-in').value.trim();
+  if(!token){show(m,'err','Paste your receipt code.');return;}
+  const rcp=await api.receipt(token);
+  if(!rcp||rcp.notfound){show(m,'err','No receipt found for that code.');return;}
+  $('#rc-result').style.display='block';
+  const fmt=t=>new Date(t).toLocaleString();
+  let state,detail,dotColor;
+  if(rcp.burnedAt){state='Opened & burned';dotColor='var(--bad)';detail='Read on <b>'+fmt(rcp.lastOpenedAt)+'</b>.<br>It reached its read limit and turned to ash. The link is dead.';}
+  else if(rcp.expired){state='Expired unread';dotColor='var(--ink-faint)';detail='The timer ran out before anyone opened it. Nothing was read.';}
+  else if(rcp.opened){state='Opened — still live';dotColor='var(--ember-2)';detail='First read on <b>'+fmt(rcp.lastOpenedAt)+'</b>. Reads so far: <b>'+rcp.openCount+'</b> of '+rcp.maxViews+'.';}
+  else{state='Sealed — not yet opened';dotColor='var(--ember)';detail='Created <b>'+fmt(rcp.createdAt)+'</b>. No one has opened it yet.';}
+  $('#rc-state').textContent=state;
+  $('#rc-dot').style.background=dotColor;$('#rc-dot').style.boxShadow='0 0 10px '+dotColor;
+  $('#rc-detail').innerHTML=detail;
+};
+
+/* ---------- incoming link routing ---------- */
+function routeIncoming(){
+  const tok=parseToken(location.hash||'');
+  if(!tok)return false;
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.pane').forEach(x=>x.classList.remove('on'));
+  document.querySelector('.tab[data-pane="open"]').classList.add('on');
+  $('#pane-open').classList.add('on');
+  $('#open-form').style.display='block';$('#open-result').style.display='none';hide($('#open-msg'));
+  $('#link-in').value=tok;$('#link-in').dispatchEvent(new Event('input'));
+  $('#manualEntry').style.display='none';$('#incoming').style.display='block';
+  window.scrollTo({top:0,behavior:'smooth'});
+  return true;
+}
+$('#previewRecipient').onclick=()=>{location.hash=$('#qr').dataset.tok;routeIncoming();};
+window.addEventListener('hashchange',routeIncoming);
+routeIncoming();
+</script>
